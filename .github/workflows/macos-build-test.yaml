@@ -1,0 +1,42 @@
+name: macOS Build Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to build
+        required: true
+        default: macos-support
+
+permissions:
+  contents: read
+
+jobs:
+  macos-build:
+    name: Build macOS plugin
+    runs-on: macos-15
+    defaults:
+      run:
+        shell: zsh --no-rcs --errexit --pipefail {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Select Xcode
+        run: sudo xcode-select --switch /Applications/Xcode_16.1.0.app/Contents/Developer
+
+      - name: Build Plugin
+        env:
+          CCACHE_DIR: ${{ github.workspace }}/.ccache
+          CODESIGN_IDENT: '-'
+          CODESIGN_TEAM: ''
+        run: .github/scripts/build-macos --config RelWithDebInfo
+
+      - name: Upload Plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: obs-multi-rtmp-macos-universal
+          path: release/RelWithDebInfo/obs-multi-rtmp.plugin
